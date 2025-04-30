@@ -24,7 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'inv3_web = hd_py.inverse3.inverse3_websocket:main',
-            'inv3_calibration = hd_py.inverse3.inverse3_calibration:main'
+            'inv3_calibration = hd_py.inverse3.inverse3_calibration:run'
         ],
     },
 )
