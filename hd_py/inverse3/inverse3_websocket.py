@@ -93,7 +93,7 @@ class Inverse3Node(Node):
             position.get("z", 0.0)
         ], dtype=np.float64)
 
-        cal_pos = self.device_to_world @ raw_pos 
+        cal_pos = self.device_to_world.T @ raw_pos 
 
         pos_msg.pose.position.x, pos_msg.pose.position.y, pos_msg.pose.position.z = cal_pos
 
