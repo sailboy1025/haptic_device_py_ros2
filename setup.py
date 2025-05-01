@@ -11,8 +11,9 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        # Install device_cal folder and its contents
-        (os.path.join('share', package_name, 'device_cal'), glob('hd_py/device_cal/*')),
+        # Recursively install device_cal folder and its contents
+        (os.path.join('share', package_name, 'device_cal'), glob('hd_py/device_cal/**/*', recursive=True)),
+        ('share/' + package_name + '/launch', glob('launch/*.py')),
     ],
     install_requires=['setuptools', 'websockets', 'orjson'],
     zip_safe=True,
