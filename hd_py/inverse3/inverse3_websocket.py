@@ -14,9 +14,9 @@ from ament_index_python.packages import get_package_share_directory
 class Inverse3Node(Node):
     def __init__(self):
         super().__init__('inverse3_node')
-        self.position_publisher = self.create_publisher(PoseStamped, 'inv3_pose', 10)
-        self.velocity_publisher = self.create_publisher(Vector3, 'inv3_velocity', 10)
-        self.button_publisher = self.create_publisher(Joy, 'joy', 10)
+        self.position_publisher = self.create_publisher(PoseStamped, 'pose', 10)
+        self.velocity_publisher = self.create_publisher(Vector3, 'velocity', 10)
+        self.button_publisher = self.create_publisher(Joy, 'buttons', 10)
 
         # Subscriptions
         self.create_subscription(Bool, '/HD_force_lock', self.force_lock_callback, 10)
@@ -152,10 +152,17 @@ async def websocket_loop(node: Inverse3Node):
             if first_message:
                 first_message = False
                 if not inverse3_data:
-                    node.get_logger().error("No Inverse3 device found.")
-                    break
-                node.inverse3_device_id = inverse3_data.get("device_id")
+                    node.get_logger().error("No Inverse3 device found. Retrying...")
+                    await asyncio.sleep(1)
+                    continue
+                if not verse_grip_data:
+                    node.get_logger().error("No Wireless Verse Grip device found. Retrying...")
+                    await asyncio.sleep(1)
+                    continue
+                node.inverse3_device_id = inverse3_data.get('device_id')
                 node.get_logger().info(f"Inverse3 device ID: {node.inverse3_device_id}")
+                node.get_logger().info(f"Wireless Verse Grip device ID: {verse_grip_data.get('device_id')}")
+                node.get_logger().info(f"Wireless Verse Grip Battery Level: {verse_grip_data.get('state', {}).get('battery_level', {})}")
                 node.enable_gravity_compensation(node.inverse3_device_id, enable=True)
 
             position = inverse3_data["state"].get("cursor_position", {})
