@@ -26,7 +26,7 @@ class Inverse3Node(Node):
         self.last_quaternion = None
 
         # Force lock PD parameters
-        self.force_lock = False
+        self.force_lock = True
         self.lock_center = np.array([0.03, -0.16, 0.2], dtype=np.float32)
         self.max_Kp = 80.0
         self.min_Kp = 5.0
