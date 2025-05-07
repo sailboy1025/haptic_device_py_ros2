@@ -1,14 +1,15 @@
 import asyncio
 import websockets
 import orjson
+import numpy as np
+import os
+import requests
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Vector3, PoseStamped
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Header, Bool
-import requests
-import numpy as np
-import os
 from ament_index_python.packages import get_package_share_directory
 
 class Inverse3Node(Node):
@@ -17,7 +18,8 @@ class Inverse3Node(Node):
         self.position_publisher = self.create_publisher(PoseStamped, 'pose', 10)
         self.velocity_publisher = self.create_publisher(Vector3, 'velocity', 10)
         self.button_publisher = self.create_publisher(Joy, 'buttons', 10)
-
+        self.use_for_sim_publisher = self.create_subscription(
+            Bool, 'use_for_coppeliasim', self.sim_cb, 10)
         # Subscriptions
         self.create_subscription(Bool, '/HD_force_lock', self.force_lock_callback, 10)
         self.create_subscription(Bool, '/HD_gc_toggle', self.gc_toggle_callback, 10)
@@ -38,7 +40,11 @@ class Inverse3Node(Node):
         # Load calibration matrix
         self.device_to_world = self.load_calibration()
 
-
+        # Alter the frame for CoppeliaSim
+        self.use_for_coppeliasim = False
+    def sim_cb(self, msg: Bool):
+        if msg.data is not None:
+            self.use_for_coppeliasim = msg.data
     def load_calibration(self):
         try:
             package_share = get_package_share_directory('hd_py')
@@ -93,6 +99,9 @@ class Inverse3Node(Node):
             position.get("z", 0.0)
         ], dtype=np.float64)
 
+        if self.use_for_coppeliasim:
+            # Alter the frame for CoppeliaSim
+            raw_pos[:2] *= -1  # Invert x and y axes
         cal_pos = self.device_to_world.T @ raw_pos 
 
         pos_msg.pose.position.x, pos_msg.pose.position.y, pos_msg.pose.position.z = cal_pos
