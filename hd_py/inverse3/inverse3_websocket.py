@@ -15,36 +15,42 @@ from ament_index_python.packages import get_package_share_directory
 class Inverse3Node(Node):
     def __init__(self):
         super().__init__('inverse3_node')
+
+        self.LOCK_CENTER = np.array([0.03, -0.18, 0.2], dtype=np.float32)
+        self.MAX_Kp = 80.0
+        self.MAX_Kd = 0.004
+        self.MIN_Kp = 20.0
+        self.MIN_Kd = 0.002
+        self.FIELD_RADIUS = 0.03
+        self.CHECKER_RADIUS = 0.01
+
+        self.inverse3_device_id = None
+
         self.position_publisher = self.create_publisher(PoseStamped, 'pose', 10)
         self.velocity_publisher = self.create_publisher(Vector3, 'velocity', 10)
+        self.ee_checker_publisher = self.create_publisher(Bool, 'ee_checker', 10)
         self.button_publisher = self.create_publisher(Joy, 'buttons', 10)
-        self.use_for_sim_publisher = self.create_subscription(
-            Bool, 'use_for_coppeliasim', self.sim_cb, 10)
         # Subscriptions
         self.create_subscription(Bool, '/HD_force_lock', self.force_lock_callback, 10)
         self.create_subscription(Bool, '/HD_gc_toggle', self.gc_toggle_callback, 10)
-        
+        self.create_subscription(Bool, 'use_for_coppeliasim', self.sim_cb, 10)
         self.gravity_compensation_enabled = True
         self.last_quaternion = None
 
         # Force lock PD parameters
         self.force_lock = True
-        self.lock_center = np.array([0.03, -0.16, 0.2], dtype=np.float32)
-        self.max_Kp = 80.0
-        self.min_Kp = 5.0
-        self.Kd = 0.002
-        self.max_distance = 0.03
 
-        self.inverse3_device_id = None
 
         # Load calibration matrix
         self.device_to_world = self.load_calibration()
 
         # Alter the frame for CoppeliaSim
         self.use_for_coppeliasim = False
+
     def sim_cb(self, msg: Bool):
         if msg.data is not None:
             self.use_for_coppeliasim = msg.data
+
     def load_calibration(self):
         try:
             package_share = get_package_share_directory('hd_py')
@@ -137,11 +143,22 @@ class Inverse3Node(Node):
 
     def compute_force(self, current_pos, current_vel):
         force = np.zeros(3, dtype=np.float32)
-        distance = np.linalg.norm(self.lock_center - current_pos)
+        distance = np.linalg.norm(self.LOCK_CENTER - current_pos)
+
         for i in range(3):
-            Kp = self.max_Kp if distance <= self.max_distance else self.min_Kp
-            error = self.lock_center[i] - current_pos[i]
-            force[i] = Kp * error - self.Kd * current_vel[i]
+            if distance <= self.FIELD_RADIUS:
+                Kp = self.MAX_Kp
+                Kd = self.MIN_Kd
+                if distance < self.CHECKER_RADIUS:
+                    # Publish a message to indicate the end-effector is within the checker radius
+                    self.ee_checker_publisher.publish(Bool(data=True))
+                else:
+                    self.ee_checker_publisher.publish(Bool(data=False))
+            else:
+                Kp = self.MIN_Kp
+                Kd = self.MAX_Kd
+            error = self.LOCK_CENTER[i] - current_pos[i]
+            force[i] = Kp * error - Kd * current_vel[i]
         return force
 
 async def websocket_loop(node: Inverse3Node):
