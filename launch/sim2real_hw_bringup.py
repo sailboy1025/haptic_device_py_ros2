@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-
+from launch.actions import TimerAction
 
 def generate_launch_description():
     return LaunchDescription([
@@ -23,17 +23,22 @@ def generate_launch_description():
             }],
             output='screen'
         ),
-        Node(
-            package='delcomp_cpp_pkg',
-            executable='delay_node',
-            name='delay_node',
-            remappings=[
-                ('joy', '/inv3/buttons')
-            ],
-            parameters=[{
-                'delay_time': 0
-            }],
-            output='screen'
+        TimerAction(
+            period=3.0,
+            actions=[
+                Node(
+                    package='delcomp_cpp_pkg',
+                    executable='delay_node',
+                    name='delay_node',
+                    remappings=[
+                        ('joy', '/inv3/buttons')
+                    ],
+                    parameters=[{
+                        'delay_time': 0
+                    }],
+                    output='screen'
+                )
+            ]
         ),
         Node(
             package='joy',

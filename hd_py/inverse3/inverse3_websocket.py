@@ -16,7 +16,7 @@ class Inverse3Node(Node):
     def __init__(self):
         super().__init__('inverse3_node')
 
-        self.LOCK_CENTER = np.array([0.03, -0.18, 0.2], dtype=np.float32)
+        self.LOCK_CENTER = np.array([-0.09, -0.17, 0.1], dtype=np.float32)
         self.MAX_Kp = 80.0
         self.MAX_Kd = 0.004
         self.MIN_Kp = 20.0
